@@ -1,3 +1,4 @@
+from projection import random_projection, pca_transform, random_shuffle_and_average_pooling
 import torch
 import numpy as np
 
@@ -51,7 +52,7 @@ def fill_method_4(train_X,test_X,train_y):
 		medians = torch.nanmedian(class_X, dim=0).values
 
 		# 计算每列的标准差 std ~ N(data_Mean, data_Std)，并确保 std > 0
-		stds = torch.tensor(np.random.normal(data_Mean, data_Std,size = class_X.shape[1]),dtype=torch.float32, device=train_X.device)
+		stds = torch.normal(data_Mean, data_Std, size=class_X.shape[1], device=train_X.device)
 		stds = torch.abs(stds) 
 
 		nan_mask = torch.isnan(class_X)
@@ -73,8 +74,8 @@ def fill_method_4(train_X,test_X,train_y):
 	medians = torch.nanmedian(combined_X, dim=0).values
 	medians = medians.unsqueeze(0)
 
-	stds = np.random.normal(data_Mean, data_Std, size=combined_X.shape[1])
-	stds = torch.tensor(stds, dtype=torch.float32).cuda()
+	# 生成标准差
+	stds = torch.normal(data_Mean, data_Std, size=combined_X.shape[1], device=train_X.device)
 	stds = torch.abs(stds)
 	stds = stds.unsqueeze(0) 
 	
@@ -82,8 +83,39 @@ def fill_method_4(train_X,test_X,train_y):
 		mean=medians.expand_as(combined_X),
 		std = stds.expand_as(combined_X),
 	).to(combined_X.device)
+	
 	combined_X[nan_mask] = random_fill[nan_mask]
 	torch.clamp(combined_X, min=0, max=1, out=combined_X)  # 限制范围在 [0, 1]
 	train_X = combined_X[:train_X.shape[0]]
 	test_X = combined_X[train_X.shape[0]:]
+	return train_X, test_X
+
+
+def pre_process(train_X, test_X, train_y,METHOD):
+	import torch
+	train_X = torch.tensor(train_X, dtype=torch.float32).cuda()
+	test_X = torch.tensor(test_X, dtype=torch.float32).cuda()
+	train_y = torch.tensor(train_y, dtype=torch.int64).cuda()
+
+
+	# 删掉 train_X 中全是 NaN 的列
+	mask = torch.all(torch.isnan(train_X), dim=0)
+	train_X = train_X[:, ~mask]
+	test_X = test_X[:, ~mask]
+	if METHOD == 3:
+		train_X,test_X = fill_method_3(train_X,test_X,train_y)
+	elif METHOD ==2:
+		train_X,test_X = fill_method_2(train_X,test_X,train_y)
+	elif METHOD == 4:
+		train_X,test_X = fill_method_3(train_X,test_X,train_y)
+		train_X,test_X = pca_transform(train_X,test_X, 10000)
+	elif METHOD == 5:
+		train_X,test_X = fill_method_3(train_X,test_X,train_y)
+		train_X,test_X = random_shuffle_and_average_pooling(train_X,test_X, 10)
+	
+
+	train_X = train_X.cpu().numpy()
+	test_X = test_X.cpu().numpy()
+	train_y = train_y.cpu().numpy()
+	torch.cuda.empty_cache()
 	return train_X, test_X
