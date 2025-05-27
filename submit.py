@@ -10,9 +10,9 @@ from train import multi_process_training_shared_data,train_single_model
 from train import multi_process_training
 
 
-METHOD = 3
-max_workers_train_data = 3
-max_workers_full_data  = 1
+METHOD = 6
+max_workers_train_data =  40
+max_workers_full_data  = 10
 
 if __name__ == "__main__":
 	mp.set_start_method('spawn',force=True)
@@ -21,16 +21,40 @@ if __name__ == "__main__":
 	print("process data done")
 
 	param_distributions = {
-		'n_estimators': [400,500,600,700],
-		'max_depth': [12,15,18,20,25,30],
-		'learning_rate': [0.1,0.05,0.15,0.2],
-		'subsample': [0.4,0.5,0.6,0.7,0.8],
-		'colsample_bytree': [0.3,0.4,0.5,0.6,0.7,0.8]		
+		'n_estimators': [400,500,600,700,800,900,1000,2000,3000,5000],
+		'max_depth': [10,12,15,18,20,25,30,40,50],
+		'learning_rate': [0.1,0.05,0.15,0.2,0.01],
+		'subsample': [0.4,0.5,0.6,0.7,0.8,0.3,0.9],
+		'colsample_bytree': [0.3,0.4,0.5,0.6,0.7,0.8,0.9]		
 	}
-	parameter_list = sample_from_distribution(param_distributions, n_samples=40)
 	X_train, X_val, y_train, y_val = train_test_split(train_X, y_encode, test_size=0.2, random_state=20041014,stratify=y_encode)
-	multi_process_training(X_train, y_train, parameter_list, max_workers=max_workers_train_data,METHOD=METHOD)
 	
+	parameter_list = sample_from_distribution(param_distributions, n_samples=200)
+	multi_process_training(X_train, y_train, parameter_list, max_workers=max_workers_train_data,METHOD=METHOD)
+	# parameter_list = []
+	# import os
+	# file_list = os.listdir()
+	# for file in file_list:
+	# 	if not(file.endswith(f"{METHOD}_776.json") and file.startswith("xgb_model")):
+	# 		continue
+	# 	if os.path.exists(file.replace("776","971")):
+	# 		continue
+	# 	n_estimators = int(file.split("_")[2])
+	# 	max_depth = int(file.split("_")[3])
+	# 	learning_rate = float(file.split("_")[4])
+	# 	subsample = float(file.split("_")[5])
+	# 	colsample_bytree = float(file.split("_")[6])
+	# 	parameter = {
+	# 		'n_estimators': n_estimators,
+	# 		'max_depth': max_depth,
+	# 		'learning_rate': learning_rate,
+	# 		'subsample': subsample,
+	# 		'colsample_bytree': colsample_bytree
+	# 	}
+	# 	parameter_list.append(parameter)
+	
+	
+
 	score_list = []
 	for model_para in parameter_list:
 		try:
@@ -60,7 +84,7 @@ if __name__ == "__main__":
 		print(f"Model {score_list[i][1]} Validation Kappa Score: {score_list[i][0]}")
 	
 	# 选 validation set 中最好的 n 个训练
-	n = 1
+	n = 10
 	best_model_list = []
 	for i in range(min(len(score_list),n)):
 		best_model_list.append(score_list[i][1])

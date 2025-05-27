@@ -50,15 +50,12 @@ def fill_method_4(train_X,test_X,train_y):
 		class_X = train_X[class_mask]
 		
 		medians = torch.nanmedian(class_X, dim=0).values
-
-		# 计算每列的标准差 std ~ N(data_Mean, data_Std)，并确保 std > 0
-		stds = torch.normal(data_Mean, data_Std, size=class_X.shape[1], device=train_X.device)
-		stds = torch.abs(stds) 
-
-		nan_mask = torch.isnan(class_X)
 		medians = medians.unsqueeze(0)
-		stds = stds.unsqueeze(0)        
 		
+		# 计算每列的标准差 std ~ N(data_Mean, data_Std)，并确保 std > 0
+		stds = torch.normal(data_Mean, data_Std, size=(1,class_X.shape[1]), device=train_X.device)
+		stds = torch.abs(stds) 
+		nan_mask = torch.isnan(class_X)
 
 		random_fill = torch.normal(
 			mean=medians.expand_as(class_X),
@@ -75,9 +72,8 @@ def fill_method_4(train_X,test_X,train_y):
 	medians = medians.unsqueeze(0)
 
 	# 生成标准差
-	stds = torch.normal(data_Mean, data_Std, size=combined_X.shape[1], device=train_X.device)
+	stds = torch.normal(data_Mean, data_Std, size=(1,combined_X.shape[1]), device=train_X.device)
 	stds = torch.abs(stds)
-	stds = stds.unsqueeze(0) 
 	
 	random_fill = torch.normal(
 		mean=medians.expand_as(combined_X),
@@ -107,12 +103,14 @@ def pre_process(train_X, test_X, train_y,METHOD):
 	elif METHOD ==2:
 		train_X,test_X = fill_method_2(train_X,test_X,train_y)
 	elif METHOD == 4:
-		train_X,test_X = fill_method_3(train_X,test_X,train_y)
+		train_X,test_X = fill_method_4(train_X,test_X,train_y)
 		train_X,test_X = pca_transform(train_X,test_X, 10000)
 	elif METHOD == 5:
 		train_X,test_X = fill_method_3(train_X,test_X,train_y)
 		train_X,test_X = random_shuffle_and_average_pooling(train_X,test_X, 10)
-	
+	elif METHOD == 6:
+		train_X,test_X = fill_method_4(train_X,test_X,train_y)
+		train_X,test_X = pca_transform(train_X,test_X, 10000)
 
 	train_X = train_X.cpu().numpy()
 	test_X = test_X.cpu().numpy()

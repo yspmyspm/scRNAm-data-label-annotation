@@ -224,6 +224,4 @@ def multi_process_training(X,y,parameters,max_workers = 3,METHOD = 0):
 		for future in futures:
 			future.result()
 	
-	del X_gpu, y_gpu, weights_gpu
-	del handle_bytes,shape
 	return 
